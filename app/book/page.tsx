@@ -1,117 +1,222 @@
 "use client";
-import React, { useState } from 'react';
-import { Calendar as CalendarIcon, Clock, User, ArrowRight, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { createBrowserClient } from '@supabase/ssr';
+import { 
+  Stethoscope, AlertCircle, ArrowLeft, Loader2, CheckCircle2, User, Clock 
+} from 'lucide-react';
+import Link from 'next/link';
 
-const doctors = [
-  { id: 1, name: "Dr. Olawale", specialty: "General Practitioner", available: "9:00 AM - 12:00 PM" },
-  { id: 2, name: "Dr. Adeyemi", specialty: "General Practitioner", available: "1:00 PM - 4:00 PM" },
-  { id: 3, name: "Dr. Smith", specialty: "Dentist", available: "10:00 AM - 2:00 PM" },
-];
+export default function BookAppointment() {
+  const [loading, setLoading] = useState(false);
+  const [fetchingDoctors, setFetchingDoctors] = useState(true);
+  const [doctors, setDoctors] = useState<any[]>([]);
+  const [submitted, setSubmitted] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    symptoms: '',
+    urgency: 'low',
+    doctorId: '',
+    preferredTime: '',
+  });
 
-const timeSlots = ["09:00 AM", "09:20 AM", "09:40 AM", "10:00 AM", "10:20 AM", "10:40 AM"];
+  const router = useRouter();
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
-export default function BookingPage() {
-  const [step, setStep] = useState(1);
-  const [selectedDoctor, setSelectedDoctor] = useState<null | { id: number; name: string; specialty: string; available: string }>(null);
-  const [selectedSlot, setSelectedSlot] = useState("");
+  useEffect(() => {
+    const getDoctors = async () => {
+      setFetchingDoctors(true);
+      try {
+        const { data, error } = await supabase
+          .from('profiles') 
+          .select('id, full_name, role')
+          .ilike('role', 'doctor'); 
+
+        if (!error && data) {
+          setDoctors(data);
+        } else if (error) {
+          console.error("Supabase Error:", error.message);
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
+      } finally {
+        setFetchingDoctors(false);
+      }
+    };
+    getDoctors();
+  }, [supabase]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.doctorId) return alert("Please select a doctor");
+    
+    setLoading(true);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No authenticated user found");
+
+      // Calculate queue
+      const { count } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('doctor_id', formData.doctorId)
+        .eq('status', 'pending');
+
+      const nextQueuePosition = (count || 0) + 1;
+      
+      let finalScheduledTime: string;
+      if (formData.preferredTime) {
+        const [hours, minutes] = formData.preferredTime.split(':');
+        const selectedDate = new Date();
+        selectedDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        finalScheduledTime = selectedDate.toISOString();
+      } else {
+        const estWaitMinutes = (count || 0) * 15;
+        const autoDate = new Date();
+        autoDate.setMinutes(autoDate.getMinutes() + estWaitMinutes);
+        finalScheduledTime = autoDate.toISOString();
+      }
+
+      // FIX: Changed 'scheduled_for' to 'appointment_date' to satisfy the DB constraint
+      const { error } = await supabase.from('appointments').insert([{
+        student_id: user.id,
+        doctor_id: formData.doctorId,
+        symptoms: formData.symptoms,
+        urgency: formData.urgency,
+        queue_position: nextQueuePosition,
+        appointment_date: finalScheduledTime, 
+        status: 'pending'
+      }]);
+
+      if (error) throw error;
+
+      setSubmitted(true);
+      setTimeout(() => router.push('/dashboard'), 2000);
+      
+    } catch (err: any) {
+      console.error("Booking Logic Error:", err);
+      alert(err.message || "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (submitted) return (
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 text-center">
+      <div className="bg-white p-12 rounded-[3rem] shadow-2xl border-2 border-slate-100 max-w-md">
+        <CheckCircle2 size={48} className="text-green-600 mx-auto mb-6" />
+        <h1 className="text-3xl font-black text-slate-900 mb-2">Request Sent!</h1>
+        <p className="text-slate-500 font-bold">Waiting for the doctor to confirm your slot.</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-12">
-      {/* Mini Header */}
-      <div className="bg-white border-b px-8 py-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-slate-800">New Appointment</h1>
-        <div className="flex items-center space-x-2 text-sm text-slate-500">
-          <span className={step >= 1 ? "text-blue-600 font-bold" : ""}>Select Doctor</span>
-          <ArrowRight size={14} />
-          <span className={step >= 2 ? "text-blue-600 font-bold" : ""}>Pick Time</span>
-          <ArrowRight size={14} />
-          <span className={step === 3 ? "text-blue-600 font-bold" : ""}>Confirm</span>
-        </div>
-      </div>
+    <div className="min-h-screen bg-slate-50 p-6 lg:p-12">
+      <Link href="/dashboard" className="inline-flex items-center gap-2 text-slate-500 font-bold hover:text-blue-600 mb-8 transition">
+        <ArrowLeft size={20} /> Back
+      </Link>
 
-      <main className="max-w-4xl mx-auto mt-10 px-6">
-        {/* Step 1: Doctor Selection */}
-        {step === 1 && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-slate-900">Who would you like to see?</h2>
-            <div className="grid gap-4">
-              {doctors.map((doc) => (
-                <div 
-                  key={doc.id}
-                  onClick={() => { setSelectedDoctor(doc); setStep(2); }}
-                  className="bg-white p-6 rounded-2xl border border-slate-200 hover:border-blue-500 hover:shadow-md cursor-pointer transition-all flex justify-between items-center"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
-                      <User size={24} />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-slate-800">{doc.name}</h3>
-                      <p className="text-slate-500 text-sm">{doc.specialty}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Availability</p>
-                    <p className="text-sm text-slate-700">{doc.available}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-10">Book Appointment</h1>
 
-        {/* Step 2: Time Slot Selection */}
-        {step === 2 && (
-          <div className="space-y-6">
-            <button onClick={() => setStep(1)} className="text-blue-600 text-sm font-medium">← Back to Doctors</button>
-            <h2 className="text-2xl font-bold text-slate-900">Select a Time Slot</h2>
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-              <div className="flex items-center space-x-2 mb-6 text-slate-600">
-                <CalendarIcon size={18} />
-                <span className="font-medium">Tuesday, November 18, 2025</span>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="bg-white p-8 rounded-[2.5rem] border-2 border-slate-200 shadow-sm">
+            <label className="block text-slate-900 font-black text-lg mb-4">Available Doctors</label>
+            {fetchingDoctors ? (
+              <div className="flex items-center gap-2 text-slate-400 font-bold">
+                <Loader2 className="animate-spin text-blue-600" size={20} />
+                <span>Finding doctors...</span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {timeSlots.map((slot) => (
+            ) : doctors.length === 0 ? (
+              <div className="p-6 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 text-center">
+                <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">No doctors found in system</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3">
+                {doctors.map((doc) => (
                   <button
-                    key={slot}
-                    onClick={() => { setSelectedSlot(slot); setStep(3); }}
-                    className={`py-3 rounded-xl border font-medium transition-all ${
-                      selectedSlot === slot 
-                      ? "bg-blue-600 border-blue-600 text-white" 
-                      : "bg-white border-slate-200 text-slate-700 hover:border-blue-300"
+                    key={doc.id}
+                    type="button"
+                    onClick={() => setFormData({...formData, doctorId: doc.id})}
+                    className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${
+                      formData.doctorId === doc.id ? 'border-blue-600 bg-blue-50' : 'border-slate-100 bg-slate-50'
                     }`}
                   >
-                    {slot}
+                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                      <User size={20} />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-black text-slate-900">{doc.full_name}</p>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{doc.role}</p>
+                    </div>
                   </button>
                 ))}
               </div>
-            </div>
+            )}
           </div>
-        )}
 
-        {/* Step 3: Success State */}
-        {step === 3 && (
-          <div className="text-center bg-white p-12 rounded-[3rem] shadow-xl border border-slate-100 animate-in fade-in zoom-in duration-300">
-            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 size={40} />
-            </div>
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">Appointment Secured!</h2>
-            <p className="text-slate-600 mb-8 max-w-xs mx-auto">
-              Your visit with **{selectedDoctor?.name}** is set for **{selectedSlot}**.
-            </p>
-            <div className="bg-slate-50 p-6 rounded-2xl mb-8 text-left space-y-3">
-              <div className="flex justify-between text-sm"><span className="text-slate-500">Queue Position:</span> <span className="font-bold text-blue-600">#1 (Direct Entry)</span></div>
-              <div className="flex justify-between text-sm"><span className="text-slate-500">Location:</span> <span className="font-bold">University Clinic Wing A</span></div>
-            </div>
-            <button 
-              className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-slate-800 transition"
-              onClick={() => window.location.href = '/dashboard'}
-            >
-              Go to Dashboard
-            </button>
+          {/* Preferred Time */}
+          <div className="bg-white p-8 rounded-[2.5rem] border-2 border-slate-200 shadow-sm">
+            <label className="block text-slate-900 font-black text-lg mb-4 flex items-center gap-2">
+              <Clock className="text-purple-600" size={20} /> Preferred Time
+            </label>
+            <input 
+              type="time"
+              className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-5 outline-none focus:border-blue-500 transition font-bold text-slate-900"
+              value={formData.preferredTime}
+              onChange={(e) => setFormData({...formData, preferredTime: e.target.value})}
+            />
           </div>
-        )}
-      </main>
+
+          {/* Symptoms */}
+          <div className="bg-white p-8 rounded-[2.5rem] border-2 border-slate-200 shadow-sm">
+            <label className="block text-slate-900 font-black text-lg mb-4 flex items-center gap-2">
+              <Stethoscope className="text-blue-600" size={20} /> Symptoms
+            </label>
+            <textarea 
+              required
+              className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl p-5 min-h-[120px] outline-none focus:border-blue-500 transition font-medium"
+              placeholder="Briefly describe what's wrong..."
+              value={formData.symptoms}
+              onChange={(e) => setFormData({...formData, symptoms: e.target.value})}
+            />
+          </div>
+
+          {/* Urgency */}
+          <div className="bg-white p-8 rounded-[2.5rem] border-2 border-slate-200 shadow-sm">
+            <label className="block text-slate-900 font-black text-lg mb-4 flex items-center gap-2">
+              <AlertCircle className="text-orange-500" size={20} /> Urgency
+            </label>
+            <div className="flex gap-4">
+              {['low', 'medium', 'high'].map((lvl) => (
+                <button
+                  key={lvl}
+                  type="button"
+                  onClick={() => setFormData({...formData, urgency: lvl})}
+                  className={`flex-1 py-4 rounded-2xl font-black uppercase text-xs border-2 transition-all ${
+                    formData.urgency === lvl ? 'border-blue-600 bg-blue-50 text-blue-600' : 'border-slate-100 bg-slate-50 text-slate-400'
+                  }`}
+                >
+                  {lvl}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button 
+            type="submit"
+            disabled={loading || !formData.doctorId}
+            className="w-full bg-blue-600 text-white py-6 rounded-[2rem] font-black text-xl shadow-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-3 disabled:bg-slate-300"
+          >
+            {loading ? <Loader2 className="animate-spin" /> : "Confirm Booking"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

@@ -1,12 +1,65 @@
 "use client";
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
-import { User, Mail, Lock, CreditCard, ArrowRight, ShieldPlus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { User, Mail, Lock, CreditCard, ArrowRight, ShieldPlus, Loader2 } from 'lucide-react';
 
 export default function RegisterPage() {
+  const router = useRouter();
+  
+  // 1. State for form data
+  const [formData, setFormData] = useState({
+    fullName: '',
+    matricNumber: '',
+    email: '',
+    password: '',
+    role: 'STUDENT' // Default role
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // 2. Handle Input Changes
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // 3. Submit to our API Route
+const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    // Transform Matric Number to the "System Email" used for Login
+    // This makes it so Matric Number '22CH031980' becomes '22CH031980@edu.ng'
+    const systemEmail = `${formData.matricNumber.trim().toUpperCase()}@edu.ng`;
+
+    const finalData = {
+      ...formData,
+      email: systemEmail, // Use the generated email instead of the input email
+      originalEmail: formData.email // Optional: keep their real email in metadata
+    };
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(finalData),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Something went wrong');
+
+      alert(`Registration successful! Your login ID is your Matric Number.`);
+      router.push('/login');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-center items-center p-6">
-      {/* Logo Area */}
       <div className="mb-8 flex items-center gap-2">
         <div className="bg-blue-600 p-2 rounded-lg text-white">
           <ShieldPlus size={24} />
@@ -21,53 +74,72 @@ export default function RegisterPage() {
             <p className="text-slate-600 text-sm mt-2 font-medium">Join the university digital health portal</p>
           </div>
 
-          <form className="space-y-4">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl font-medium">
+              {error}
+            </div>
+          )}
+
+          <form className="space-y-4" onSubmit={handleSubmit}>
             {/* Full Name */}
             <div className="relative">
-              <User className="absolute left-4 top-1/2 -translate-y-1-1/2 text-slate-900" size={18} />
+              <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
+                name="fullName"
                 type="text" 
+                required
+                onChange={handleChange}
                 placeholder="Full Name"
-                className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-900 placeholder:opacity-100 font-medium"
+                className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400 font-medium"
               />
             </div>
 
-            {/* Matric Number */}
+            {/* Matric Number (Metadata for your smart scheduling) */}
             <div className="relative">
-              <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-900" size={18} />
+              <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
+                name="matricNumber"
                 type="text" 
+                required
+                onChange={handleChange}
                 placeholder="Matric Number (e.g. 22CH031980)"
-                className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-900 placeholder:opacity-100 font-medium"
+                className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400 font-medium"
               />
             </div>
 
             {/* Email */}
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-900" size={18} />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
+                name="email"
                 type="email" 
+                required
+                onChange={handleChange}
                 placeholder="University Email Address"
-                className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-900 placeholder:opacity-100 font-medium"
+                className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400 font-medium"
               />
             </div>
 
             {/* Password */}
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-900" size={18} />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <input 
+                name="password"
                 type="password" 
+                required
+                onChange={handleChange}
                 placeholder="Create Password"
-                className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-900 placeholder:opacity-100 font-medium"
+                className="w-full pl-12 pr-5 py-4 bg-slate-50 border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-400 font-medium"
               />
             </div>
 
             <div className="pt-2">
               <button 
-                type="button"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-blue-200 flex items-center justify-center gap-2 transition-all"
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-4 rounded-2xl font-bold text-lg shadow-lg shadow-blue-200 flex items-center justify-center gap-2 transition-all"
               >
-                Register Account <ArrowRight size={20} />
+                {loading ? <Loader2 className="animate-spin" /> : <>Register Account <ArrowRight size={20} /></>}
               </button>
             </div>
           </form>

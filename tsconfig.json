@@ -28,6 +28,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
+    "**/*.js",    // Add this
+    "**/*.jsx",
     "**/*.mts"
   ],
   "exclude": ["node_modules"]
