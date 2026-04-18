@@ -1,5 +1,5 @@
 // app/lib/scheduler.ts
-import { prisma } from "@/lib/prisma";
+import { prisma } from "./prisma";
 
 export async function validateSlotAvailability(
   studentId: string, 

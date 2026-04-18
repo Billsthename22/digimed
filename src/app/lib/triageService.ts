@@ -25,7 +25,7 @@ export enum TriageLevel {
     }
   
     // Urgent Indicators (YELLOW)
-    if (symptoms.fever >= 39) score += 40;
+    if (symptoms.fever === 39) score += 40;
     if (symptoms.severePain) score += 30;
     if (symptoms.persistentVomiting) score += 30;
   
