@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createBrowserClient } from "@supabase/ssr";
 import {
   Mail,
   Lock,
@@ -14,11 +13,6 @@ import {
 
 export default function StaffAuthPage() {
   const router = useRouter();
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -34,48 +28,27 @@ export default function StaffAuthPage() {
     setLoading(true);
     setErrorMsg(null);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
+    try {
+      const res = await fetch("/api/auth/staff/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
 
-    if (error || !data?.user) {
-      setErrorMsg(error?.message || "Invalid email or password");
+      const data = await res.json();
+
+      if (!res.ok) {
+        setErrorMsg(data.message || "Invalid email or password");
+        return;
+      }
+
+      localStorage.setItem("token", data.token);
+      router.push("/doctordashboard");
+    } catch {
+      setErrorMsg("Network error. Please try again.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // SAFE PROFILE FETCH (no assumptions about columns)
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", data.user.id)
-      .maybeSingle();
-
-    if (profileError) {
-      setErrorMsg("Failed to load profile");
-      await supabase.auth.signOut();
-      setLoading(false);
-      return;
-    }
-
-    if (!profile) {
-      setErrorMsg("Profile not found. Contact admin.");
-      await supabase.auth.signOut();
-      setLoading(false);
-      return;
-    }
-
-    // STRICT DOCTOR CHECK
-    if ((profile.role || "").toUpperCase() !== "DOCTOR") {
-      setErrorMsg("Access denied: Doctor portal only");
-      await supabase.auth.signOut();
-      setLoading(false);
-      return;
-    }
-
-    router.push("/doctordashboard");
-    router.refresh();
   };
 
   // ================= REGISTER =================
@@ -84,36 +57,27 @@ export default function StaffAuthPage() {
     setLoading(true);
     setErrorMsg(null);
 
-    const { data, error: authError } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-    });
-
-    if (authError || !data?.user) {
-      setErrorMsg(authError?.message || "Signup failed");
-      setLoading(false);
-      return;
-    }
-
-    // CREATE DOCTOR PROFILE ONLY (NO STUDENT FIELDS)
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .upsert({
-        id: data.user.id,
-        full_name: fullName,
-        role: "DOCTOR",
+    try {
+      const res = await fetch("/api/auth/staff/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName, email: email.trim(), password }),
       });
 
-    if (profileError) {
-      console.error(profileError);
-      setErrorMsg("Profile creation failed");
-      setLoading(false);
-      return;
-    }
+      const data = await res.json();
 
-    setErrorMsg("Doctor account created! You can now log in.");
-    setIsLogin(true);
-    setLoading(false);
+      if (!res.ok) {
+        setErrorMsg(data.message || "Registration failed");
+        return;
+      }
+
+      setErrorMsg("Doctor account created! You can now log in.");
+      setIsLogin(true);
+    } catch {
+      setErrorMsg("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -141,17 +105,16 @@ export default function StaffAuthPage() {
         <div className="flex mb-6 bg-slate-900 rounded-xl p-1 border border-slate-700">
           <button
             type="button"
-            onClick={() => setIsLogin(true)}
+            onClick={() => { setIsLogin(true); setErrorMsg(null); }}
             className={`flex-1 py-2 font-bold rounded-lg ${
               isLogin ? "bg-blue-500 text-white" : "text-slate-400"
             }`}
           >
             Login
           </button>
-
           <button
             type="button"
-            onClick={() => setIsLogin(false)}
+            onClick={() => { setIsLogin(false); setErrorMsg(null); }}
             className={`flex-1 py-2 font-bold rounded-lg ${
               !isLogin ? "bg-blue-500 text-white" : "text-slate-400"
             }`}
@@ -160,7 +123,7 @@ export default function StaffAuthPage() {
           </button>
         </div>
 
-        {/* Error */}
+        {/* Error / Success */}
         {errorMsg && (
           <div className={`mb-4 p-3 rounded-lg text-sm font-bold text-center ${
             errorMsg.includes("created")
@@ -179,7 +142,7 @@ export default function StaffAuthPage() {
               placeholder="Full Name (Dr. ...)"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="w-full p-4 rounded-xl bg-slate-900 text-white border border-slate-700"
+              className="w-full p-4 rounded-xl bg-slate-900 text-white border border-slate-700 placeholder:text-slate-500"
               required
             />
           )}
@@ -191,7 +154,7 @@ export default function StaffAuthPage() {
               placeholder="Medical Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-12 p-4 rounded-xl bg-slate-900 text-white border border-slate-700"
+              className="w-full pl-12 p-4 rounded-xl bg-slate-900 text-white border border-slate-700 placeholder:text-slate-500"
               required
             />
           </div>
@@ -203,7 +166,7 @@ export default function StaffAuthPage() {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-12 p-4 rounded-xl bg-slate-900 text-white border border-slate-700"
+              className="w-full pl-12 p-4 rounded-xl bg-slate-900 text-white border border-slate-700 placeholder:text-slate-500"
               required
             />
           </div>
