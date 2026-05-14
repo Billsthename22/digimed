@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Clock, User, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
+import { Clock, User, ArrowRight, CheckCircle2, Loader2, Stethoscope, AlertTriangle } from 'lucide-react';
 
 interface Doctor {
   _id: string;
@@ -20,6 +20,15 @@ const timeSlots = [
   "10:00 AM", "10:20 AM", "10:40 AM",
   "11:00 AM", "11:20 AM", "11:40 AM",
   "12:00 PM", "12:20 PM", "12:40 PM",
+];
+
+const departments = [
+  "General Consultation",
+  "Cardiology",
+  "Dental Clinic",
+  "Optometry",
+  "Mental Health / Counseling",
+  "Laboratory Services"
 ];
 
 function decodeToken(token: string): StudentInfo | null {
@@ -47,8 +56,14 @@ export default function BookingPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
   const [step, setStep] = useState(1);
+  
+  // New Form States
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedSlot, setSelectedSlot] = useState('');
+  const [department, setDepartment] = useState('');
+  const [reason, setReason] = useState('');
+  const [severity, setSeverity] = useState(1);
+
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState('');
 
@@ -75,7 +90,10 @@ export default function BookingPage() {
   };
 
   const handleConfirm = async () => {
-    if (!student || !selectedDoctor || !selectedSlot) return;
+    if (!student || !selectedDoctor || !selectedSlot || !department || !reason) {
+      setError("Please fill in all details including department and reason.");
+      return;
+    }
     setBooking(true);
     setError('');
 
@@ -89,20 +107,21 @@ export default function BookingPage() {
           matricNumber: student.matricNumber,
           doctorId: selectedDoctor._id,
           doctorName: selectedDoctor.fullName,
+          department,
+          reason,
+          severity,
           date: getTodayDate(),
           time: selectedSlot,
         }),
       });
 
       const data = await res.json();
-
       if (!res.ok) {
         setError(data.message);
-        setStep(2); // send back to time selection if slot taken
+        setStep(2); 
         return;
       }
-
-      setStep(3); // success
+      setStep(3); 
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -110,65 +129,59 @@ export default function BookingPage() {
     }
   };
 
+  const getSeverityColor = () => {
+    if (severity <= 3) return "bg-green-500";
+    if (severity <= 7) return "bg-orange-500";
+    return "bg-red-600";
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
-      {/* Header */}
-      <div className="bg-white border-b px-8 py-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-slate-800">New Appointment</h1>
-        <div className="flex items-center space-x-2 text-sm text-slate-500">
-          <span className={step >= 1 ? "text-blue-600 font-bold" : ""}>Select Doctor</span>
-          <ArrowRight size={14} />
-          <span className={step >= 2 ? "text-blue-600 font-bold" : ""}>Pick Time</span>
-          <ArrowRight size={14} />
-          <span className={step === 3 ? "text-blue-600 font-bold" : ""}>Confirm</span>
+      <div className="bg-white border-b px-8 py-4 flex justify-between items-center shadow-sm">
+        <h1 className="text-xl font-black text-slate-800 uppercase italic">New Appointment</h1>
+        <div className="hidden md:flex items-center space-x-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <span className={step >= 1 ? "text-blue-600" : ""}>01. Specialist</span>
+          <ArrowRight size={12} />
+          <span className={step >= 2 ? "text-blue-600" : ""}>02. Details & Time</span>
+          <ArrowRight size={12} />
+          <span className={step === 3 ? "text-blue-600" : ""}>03. Confirmed</span>
         </div>
       </div>
 
       <main className="max-w-4xl mx-auto mt-10 px-6">
-
-        {/* Error Banner */}
         {error && (
-          <div className="mb-6 px-4 py-3 bg-red-50 border border-red-200 text-red-600 text-sm font-medium rounded-2xl">
-            {error}
+          <div className="mb-6 px-6 py-4 bg-red-50 border-2 border-red-100 text-red-600 text-xs font-black uppercase tracking-widest rounded-2xl flex items-center gap-3">
+            <AlertTriangle size={18} /> {error}
           </div>
         )}
 
         {/* Step 1: Doctor Selection */}
         {step === 1 && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-slate-900">Who would you like to see?</h2>
-
-            {loadingDoctors && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h2 className="text-3xl font-black text-[#0F1E3D] uppercase italic tracking-tighter">Choose a Specialist</h2>
+            {loadingDoctors ? (
               <div className="flex items-center justify-center py-20 gap-3 text-slate-400">
                 <Loader2 className="animate-spin" size={24} />
-                <span className="font-bold">Loading doctors...</span>
+                <span className="font-black uppercase text-[10px] tracking-widest">Loading...</span>
               </div>
-            )}
-
-            {!loadingDoctors && doctors.length === 0 && (
-              <div className="text-center py-20 text-slate-400 font-bold">
-                No doctors are currently available.
-              </div>
-            )}
-
-            {!loadingDoctors && doctors.length > 0 && (
+            ) : (
               <div className="grid gap-4">
                 {doctors.map((doc) => (
                   <div
                     key={doc._id}
                     onClick={() => { setSelectedDoctor(doc); setStep(2); setError(''); }}
-                    className="bg-white p-6 rounded-2xl border-2 border-slate-200 hover:border-blue-500 hover:shadow-md cursor-pointer transition-all flex justify-between items-center"
+                    className="group bg-white p-6 rounded-[2rem] border-2 border-slate-100 hover:border-blue-600 hover:shadow-xl cursor-pointer transition-all flex justify-between items-center"
                   >
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-black text-lg">
-                        {doc.fullName.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()}
+                    <div className="flex items-center space-x-6">
+                      <div className="w-14 h-14 bg-slate-50 text-blue-600 rounded-2xl flex items-center justify-center font-black text-xl border border-slate-100 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                        {doc.fullName.split(' ').map((n) => n[0]).slice(0, 2).join('')}
                       </div>
                       <div>
-                        <h3 className="font-black text-slate-900">{doc.fullName}</h3>
-                        <p className="text-slate-500 text-sm">{doc.email}</p>
+                        <h3 className="font-black text-lg text-[#0F1E3D] uppercase italic leading-none mb-1">Dr. {doc.fullName}</h3>
+                        <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">{doc.email}</p>
                       </div>
                     </div>
-                    <div className="text-blue-600">
+                    <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-blue-50 group-hover:text-blue-600 transition-all">
                       <ArrowRight size={20} />
                     </div>
                   </div>
@@ -178,80 +191,126 @@ export default function BookingPage() {
           </div>
         )}
 
-        {/* Step 2: Time Slot */}
+        {/* Step 2: Details & Time Slot */}
         {step === 2 && (
-          <div className="space-y-6">
-            <button onClick={() => setStep(1)} className="text-blue-600 text-sm font-bold">
-              ← Back to Doctors
+          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+            <button onClick={() => setStep(1)} className="flex items-center gap-2 text-[#0F1E3D] text-[10px] font-black uppercase tracking-widest hover:text-blue-600 transition-colors">
+              <ArrowRight size={14} className="rotate-180" /> Change Doctor
             </button>
-            <h2 className="text-2xl font-bold text-slate-900">
-              Select a Time with {selectedDoctor?.fullName}
-            </h2>
-            <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-              <div className="flex items-center space-x-2 mb-6 text-slate-600">
-                <Clock size={18} />
-                <span className="font-bold">{getTodayDate()}</span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {timeSlots.map((slot) => (
-                  <button
-                    key={slot}
-                    onClick={() => setSelectedSlot(slot)}
-                    className={`py-3 rounded-xl border-2 font-bold transition-all ${selectedSlot === slot
-                        ? "bg-blue-600 border-blue-600 text-white"
-                        : "bg-white border-slate-200 text-slate-700 hover:border-blue-300"
-                      }`}
-                  >
-                    {slot}
-                  </button>
-                ))}
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Form Section */}
+              <div className="space-y-6">
+                <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Department</label>
+                    <select 
+                      value={department}
+                      onChange={(e) => setDepartment(e.target.value)}
+                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm font-bold focus:border-blue-600 outline-none transition-all"
+                    >
+                      <option value="">Select Department</option>
+                      {departments.map(dept => <option key={dept} value={dept}>{dept}</option>)}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Reason for Visit</label>
+                    <textarea 
+                      placeholder="Briefly describe your symptoms..."
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      rows={3}
+                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm font-bold focus:border-blue-600 outline-none transition-all resize-none"
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                        Severity Level: <span className={`px-2 py-0.5 rounded text-white ${getSeverityColor()}`}>{severity}</span>
+                      </label>
+                    </div>
+                    <input 
+                      type="range" min="1" max="10" 
+                      value={severity}
+                      onChange={(e) => setSeverity(parseInt(e.target.value))}
+                      className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                    />
+                    <div className="flex justify-between text-[8px] font-black text-slate-300 uppercase tracking-tighter">
+                      <span>Low (Regular)</span>
+                      <span>High (Urgent)</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <button
-                onClick={handleConfirm}
-                disabled={!selectedSlot || booking}
-                className="mt-8 w-full bg-blue-600 text-white py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {booking ? <Loader2 className="animate-spin" size={20} /> : <>Confirm Booking <ArrowRight size={20} /></>}
-              </button>
+              {/* Time Section */}
+              <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                   <h3 className="text-sm font-black text-[#0F1E3D] uppercase tracking-widest">Select Slot</h3>
+                   <div className="flex items-center gap-2 text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter">
+                    <Clock size={12} /> {getTodayDate()}
+                   </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {timeSlots.map((slot) => (
+                    <button
+                      key={slot}
+                      onClick={() => setSelectedSlot(slot)}
+                      className={`py-4 rounded-2xl border-2 text-[11px] font-black transition-all ${selectedSlot === slot
+                          ? "bg-[#0F1E3D] border-[#0F1E3D] text-white shadow-xl shadow-blue-900/20"
+                          : "bg-white border-slate-100 text-slate-600 hover:border-blue-300"
+                        }`}
+                    >
+                      {slot}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={handleConfirm}
+                  disabled={!selectedSlot || !department || !reason || booking}
+                  className="mt-8 w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50"
+                >
+                  {booking ? <Loader2 className="animate-spin" size={18} /> : <>Confirm Visit <ArrowRight size={18} /></>}
+                </button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Step 3: Success */}
+        {/* Step 3: Success Screen */}
         {step === 3 && (
-          <div className="text-center bg-white p-12 rounded-[3rem] shadow-xl border border-slate-100">
-            <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-              <CheckCircle2 size={40} />
+          <div className="text-center bg-white p-12 rounded-[4rem] shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-500">
+            <div className="w-24 h-24 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-8 border-4 border-white shadow-lg">
+              <CheckCircle2 size={48} />
             </div>
-            <h2 className="text-3xl font-black text-slate-900 mb-2">Appointment Secured!</h2>
-            <p className="text-slate-600 mb-8 max-w-xs mx-auto">
-             
-           Your visit with <span className="font-black text-slate-900">Dr. {selectedDoctor?.fullName}</span> is set for <span className="font-black text-slate-900">{selectedSlot}</span>.
+            <h2 className="text-4xl font-black text-[#0F1E3D] uppercase italic tracking-tighter leading-none mb-4">Visit Secured</h2>
+            <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-10">
+              Please present your digital ID at the reception.
             </p>
-            <div className="bg-slate-50 p-6 rounded-2xl mb-8 text-left space-y-3">
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Doctor:</span>
-                <span className="font-black text-slate-900">{selectedDoctor?.fullName}</span>
+            
+            <div className="bg-[#0F1E3D] text-white p-8 rounded-[2.5rem] mb-10 text-left space-y-4 shadow-2xl">
+              <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                <span className="text-blue-300 text-[10px] font-black uppercase tracking-widest">Specialist</span>
+                <span className="font-black italic uppercase">Dr. {selectedDoctor?.fullName}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Time:</span>
-                <span className="font-black text-blue-600">{selectedSlot}</span>
+              <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                <span className="text-blue-300 text-[10px] font-black uppercase tracking-widest">Schedule</span>
+                <span className="font-black text-blue-400">{selectedSlot} — Today</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Date:</span>
-                <span className="font-black text-slate-900">{getTodayDate()}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-slate-500">Status:</span>
-                <span className="font-black text-orange-500">Waiting</span>
+              <div className="flex justify-between items-center">
+                <span className="text-blue-300 text-[10px] font-black uppercase tracking-widest">Dept.</span>
+                <span className="font-black text-xs uppercase">{department}</span>
               </div>
             </div>
+
             <button
               onClick={() => router.push('/dashboard')}
-              className="w-full bg-slate-900 text-white py-4 rounded-xl font-black hover:bg-slate-800 transition"
+              className="w-full bg-slate-900 text-white py-5 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[10px] hover:bg-blue-600 transition-all shadow-xl"
             >
-              Go to Dashboard
+              Return to Dashboard
             </button>
           </div>
         )}

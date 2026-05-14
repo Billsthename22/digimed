@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Users, Clock, ArrowRight, Activity, Search, Loader2 } from 'lucide-react';
+import { Users, Clock, ArrowRight, Activity, Search, Loader2, RefreshCw } from 'lucide-react';
 
 interface DoctorInfo {
   fullName: string;
@@ -77,139 +77,126 @@ export default function DoctorDashboard() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col lg:flex-row">
 
-      {/* Sidebar */}
-      <aside className="w-full lg:w-64 bg-slate-900 p-6 text-white flex flex-col">
-        <div className="flex items-center gap-2 mb-10">
-          <div className="bg-blue-600 p-1.5 rounded-lg text-white">
-            <Activity size={20} />
+      {/* Sidebar - Tactical Dark Theme */}
+      <aside className="w-full lg:w-72 bg-[#0F1E3D] p-8 text-white flex flex-col shadow-2xl">
+        <div className="flex items-center gap-3 mb-12">
+          <div className="bg-blue-600 p-2 rounded-xl">
+            <Activity size={24} />
           </div>
-          <span className="text-xl font-bold">DigiMed Staff</span>
+          <span className="text-xl font-black uppercase tracking-tighter italic">DigiMed <span className="text-blue-500">OS</span></span>
         </div>
 
-        <div className="flex items-center gap-3 mb-10 p-4 bg-slate-800 rounded-2xl border border-slate-700">
-          <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-black text-sm shrink-0">
+        <div className="flex items-center gap-4 mb-12 p-5 bg-white/5 rounded-3xl border border-white/10">
+          <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black text-lg shadow-inner">
             {doctor?.initials ?? '..'}
           </div>
           <div className="overflow-hidden">
-            <p className="text-sm font-black text-white truncate">{doctor?.fullName ?? '...'}</p>
-            <p className="text-xs font-bold text-slate-400">Medical Doctor</p>
+            <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Medical Staff</p>
+            <p className="text-sm font-black text-white truncate uppercase italic">{doctor?.fullName ?? '...'}</p>
           </div>
         </div>
 
-        <nav className="space-y-4">
-          <div className="text-blue-400 bg-blue-600/10 p-3 rounded-xl font-bold">Patient Queue</div>
-          <div className="text-slate-400 p-3 rounded-xl hover:bg-slate-800 transition cursor-pointer">Schedule Manager</div>
-          <div className="text-slate-400 p-3 rounded-xl hover:bg-slate-800 transition cursor-pointer">History Logs</div>
+        <nav className="space-y-3">
+          <div className="text-white bg-blue-600 p-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-blue-900/40 flex items-center gap-3">
+            <Users size={16} /> Patient Queue
+          </div>
+          <div className="text-slate-400 p-4 rounded-2xl hover:bg-white/5 transition cursor-pointer font-black text-[10px] uppercase tracking-[0.2em]">Management</div>
+          <div className="text-slate-400 p-4 rounded-2xl hover:bg-white/5 transition cursor-pointer font-black text-[10px] uppercase tracking-[0.2em]">Medical Logs</div>
         </nav>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-8">
-        <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <main className="flex-1 p-8 lg:p-12">
+        <header className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Doctor's Portal</h1>
-            <p className="text-slate-600 font-bold">
-              Welcome back, {doctor?.fullName ? `Dr. ${doctor.fullName.split(' ').slice(-1)[0]}` : '...'}
-            </p>
+            <h1 className="text-4xl font-black text-[#0F1E3D] uppercase tracking-tighter italic leading-none mb-2">Doctor's Portal</h1>
+            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em]">Operational Overview • Live Queue</p>
           </div>
+          
           <div className="flex gap-4">
-            <div className="bg-white px-6 py-3 rounded-2xl border-2 border-slate-200 shadow-sm text-center">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">In Queue</p>
-              <p className="text-xl font-black text-blue-600">{appointments.length}</p>
+            <div className="bg-white px-8 py-4 rounded-[2rem] border-2 border-slate-100 shadow-sm text-center">
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">In Waiting</p>
+              <p className="text-2xl font-black text-blue-600">{appointments.length}</p>
             </div>
             <button
               onClick={fetchAppointments}
-              className="bg-white px-6 py-3 rounded-2xl border-2 border-slate-200 shadow-sm text-center hover:border-blue-400 transition"
+              className="bg-white p-4 rounded-[1.5rem] border-2 border-slate-100 shadow-sm hover:border-blue-600 transition-all active:scale-95"
             >
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Refresh</p>
-              <p className="text-xl font-black text-slate-700">↻</p>
+              <RefreshCw size={20} className={`text-slate-400 ${loading ? 'animate-spin text-blue-600' : ''}`} />
             </button>
           </div>
         </header>
 
-        {/* Search */}
-        <div className="mb-8 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+        {/* Tactical Search */}
+        <div className="mb-10 relative">
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
           <input
             type="text"
             value={search}
             onChange={handleSearch}
-            placeholder="Search student by name or matric number..."
-            className="w-full pl-12 pr-5 py-4 bg-white border-2 border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none placeholder:text-slate-400 text-slate-900 font-bold"
+            placeholder="FILTER BY NAME OR MATRIC NO..."
+            className="w-full pl-16 pr-8 py-5 bg-white border-2 border-slate-100 rounded-[2rem] focus:border-blue-600 outline-none placeholder:text-slate-300 text-[#0F1E3D] font-black text-[11px] tracking-widest uppercase transition-all"
           />
         </div>
 
-        {/* Queue Table */}
-        <div className="bg-white rounded-[2.5rem] border-2 border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-6 border-b-2 border-slate-100 flex items-center justify-between bg-slate-50">
-            <h3 className="font-black text-slate-900 uppercase tracking-wider text-sm flex items-center gap-2">
-              <Users size={18} /> Live Appointments
+        {/* Table Container */}
+        <div className="bg-white rounded-[3rem] border-2 border-slate-100 shadow-xl overflow-hidden">
+          <div className="p-8 border-b-2 border-slate-50 flex items-center justify-between bg-slate-50/50">
+            <h3 className="font-black text-[#0F1E3D] uppercase tracking-[0.2em] text-xs flex items-center gap-3">
+              <Users size={18} className="text-blue-600" /> Patient Manifest
             </h3>
-            <span className="text-xs font-bold text-slate-600 bg-white border px-3 py-1 rounded-full">
-              {filtered.length} Students Waiting
+            <span className="text-[9px] font-black text-slate-400 bg-white border-2 border-slate-100 px-4 py-2 rounded-full uppercase tracking-widest">
+              {filtered.length} Records Found
             </span>
           </div>
 
-          {/* Loading */}
-          {loading && (
-            <div className="flex items-center justify-center py-20 gap-3 text-slate-400">
-              <Loader2 className="animate-spin" size={24} />
-              <span className="font-bold">Loading appointments...</span>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-24 gap-4">
+              <Loader2 className="animate-spin text-blue-600" size={32} />
+              <span className="font-black text-[10px] uppercase tracking-[0.3em] text-slate-400">Syncing Records...</span>
             </div>
-          )}
-
-          {/* Error */}
-          {!loading && error && (
-            <div className="text-center py-20 text-red-500 font-bold">{error}</div>
-          )}
-
-          {/* Empty */}
-          {!loading && !error && filtered.length === 0 && (
-            <div className="text-center py-20 text-slate-400 font-bold">
-              No appointments in the queue right now.
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-24">
+              <p className="font-black text-[10px] uppercase tracking-[0.3em] text-slate-300 italic">No Patients in Queue</p>
             </div>
-          )}
-
-          {/* Table */}
-          {!loading && !error && filtered.length > 0 && (
+          ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b-2 border-slate-100">
-                    <th className="p-6 text-xs font-black text-slate-400 uppercase">Student Details</th>
-                    <th className="p-6 text-xs font-black text-slate-400 uppercase">Date</th>
-                    <th className="p-6 text-xs font-black text-slate-400 uppercase">Appt. Time</th>
-                    <th className="p-6 text-xs font-black text-slate-400 uppercase">Status</th>
-                    <th className="p-6 text-xs font-black text-slate-400 uppercase text-right">Action</th>
+                  <tr className="bg-slate-50/30">
+                    <th className="p-8 text-[9px] font-black text-slate-400 uppercase tracking-widest">Patient Identity</th>
+                    <th className="p-8 text-[9px] font-black text-slate-400 uppercase tracking-widest">Schedule</th>
+                    <th className="p-8 text-[9px] font-black text-slate-400 uppercase tracking-widest">Priority</th>
+                    <th className="p-8 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Operation</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-50">
                   {filtered.map((appointment) => (
-                    <tr key={appointment._id} className="border-b border-slate-50 hover:bg-blue-50/30 transition-colors">
-                      <td className="p-6">
-                        <p className="font-black text-slate-900">{appointment.studentName}</p>
-                        <p className="text-xs font-bold text-slate-500">{appointment.matricNumber}</p>
+                    <tr key={appointment._id} className="group hover:bg-blue-50/20 transition-all duration-300">
+                      <td className="p-8">
+                        <p className="font-black text-[#0F1E3D] uppercase italic tracking-tighter text-lg">{appointment.studentName}</p>
+                        <p className="text-[10px] font-bold text-slate-400 tracking-widest">{appointment.matricNumber}</p>
                       </td>
-                      <td className="p-6 font-bold text-slate-700">{appointment.date}</td>
-                      <td className="p-6">
-                        <div className="flex items-center gap-2 text-slate-900 font-bold">
-                          <Clock size={16} /> {appointment.time}
+                      <td className="p-8">
+                        <div className="inline-flex items-center gap-2 bg-slate-100 px-4 py-2 rounded-xl text-[11px] font-black text-[#0F1E3D]">
+                          <Clock size={14} className="text-blue-600" /> {appointment.time}
                         </div>
                       </td>
-                      <td className="p-6">
-                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border-2 ${appointment.status === 'Waiting'
+                      <td className="p-8">
+                        <span className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.2em] border-2 ${
+                            appointment.status === 'Waiting'
                             ? 'bg-orange-50 text-orange-600 border-orange-100'
                             : 'bg-blue-50 text-blue-600 border-blue-100'
                           }`}>
                           {appointment.status}
                         </span>
                       </td>
-                      <td className="p-6 text-right">
+                      <td className="p-8 text-right">
                         <Link
-                          href={`/doctor/consult?id=${appointment._id}`}
-                          className="inline-flex items-center gap-2 bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition shadow-md shadow-blue-100"
+                          href={`/doctordashboard/consult?id=${appointment._id}`}
+                          className="inline-flex items-center gap-3 bg-[#0F1E3D] text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-blue-600 hover:-translate-x-1 transition-all shadow-lg active:scale-95"
                         >
-                          Attend <ArrowRight size={16} />
+                          Attend <ArrowRight size={14} className="text-blue-400" />
                         </Link>
                       </td>
                     </tr>
