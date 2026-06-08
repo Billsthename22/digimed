@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// 1. Define Enums for strict type safety
+enum Role {
+  STUDENT
+  DOCTOR
+  ADMIN
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum TriageLevel {
+  GREEN   // ROUTINE
+  YELLOW  // URGENT
+  RED     // EMERGENCY
+}
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  password      String
+  name          String?
+  role          Role     @default(STUDENT)
+  matricNumber  String?  @unique
+  
+  // Relationships
+  appointmentsAsStudent Appointment[] @relation("StudentApp")
+  appointmentsAsDoctor  Appointment[] @relation("DoctorApp")
+  messages              Message[]
+}
+
+model Appointment {
+  id          String            @id @default(cuid())
+  startTime   DateTime
+  endTime     DateTime
+  status      AppointmentStatus @default(PENDING)
+  priority    TriageLevel       @default(GREEN)
+  
+  studentId   String
+  student     User              @relation("StudentApp", fields: [studentId], references: [id])
+  doctorId    String
+  doctor      User              @relation("DoctorApp", fields: [doctorId], references: [id])
+  
+  messages    Message[]
+  createdAt   DateTime          @default(now())
+}
+
+model Message {
+  id            String      @id @default(cuid())
+  text          String
+  senderId      String
+  sender        User        @relation(fields: [senderId], references: [id])
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id])
+  createdAt     DateTime    @default(now())
+}
