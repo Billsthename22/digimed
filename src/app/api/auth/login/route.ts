@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import connectDB from "@/src/app/lib/connectDB";
 import Student from "@/src/app/models/student";
 import { signToken } from "@/src/app/lib/jwt";
+import bcrypt from "bcryptjs";
 
 interface LoginBody {
   email: string;
@@ -33,6 +34,11 @@ export async function POST(req: NextRequest) {
     // --- Find student (include password since it's select: false) ---
     const student = await Student.findOne({ email: email.toLowerCase() }).select("+password");
 
+    console.log('student found:', student ? 'yes' : 'no');
+    console.log('email tried:', email.toLowerCase());
+    console.log('password field exists:', !!student?.password);
+    console.log('password value:', student?.password);
+
     if (!student) {
       return Response.json(
         { success: false, message: "Invalid email or password" },
@@ -41,7 +47,9 @@ export async function POST(req: NextRequest) {
     }
 
     // --- Compare password ---
-    const isMatch = await student.comparePassword(password);
+  const isMatch = await bcrypt.compare(password, student.password);
+console.log('password match result:', isMatch);
+console.log('password entered:', password);
 
     if (!isMatch) {
       return Response.json(

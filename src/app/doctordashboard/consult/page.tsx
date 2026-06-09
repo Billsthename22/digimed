@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { ClipboardList, Pill, FileCheck, ArrowLeft, Send, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -18,7 +18,7 @@ interface Appointment {
   severity: number;
 }
 
-export default function DoctorConsultPage() {
+function DoctorConsultPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const appointmentId = searchParams.get('id');
@@ -79,8 +79,6 @@ export default function DoctorConsultPage() {
       }
 
       setSuccess(true);
-
-      // Redirect back to dashboard after 2 seconds
       setTimeout(() => router.push('/doctordashboard'), 2000);
     } catch {
       setSubmitError('Network error. Please try again.');
@@ -132,7 +130,6 @@ export default function DoctorConsultPage() {
 
             {!loading && appointment && (
               <>
-                {/* Profile Header */}
                 <div className="bg-gradient-to-br from-slate-900 to-blue-900 p-8 text-center">
                   <div className="w-20 h-20 bg-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center text-white font-black text-2xl border-4 border-white/20 shadow-xl">
                     {appointment.studentName.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()}
@@ -145,9 +142,7 @@ export default function DoctorConsultPage() {
                   </p>
                 </div>
 
-                {/* Details */}
                 <div className="p-6 space-y-4">
-
                   <div className="bg-slate-50 rounded-2xl p-4 border-2 border-slate-100">
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">School Department</p>
                     <p className="text-slate-900 font-black text-sm">{appointment.schoolDepartment ?? 'Not provided'}</p>
@@ -213,7 +208,6 @@ export default function DoctorConsultPage() {
         {/* Right Column: Medical Entry */}
         <div className="lg:col-span-2 space-y-6">
 
-          {/* Success State */}
           {success && (
             <div className="bg-green-50 border-2 border-green-200 rounded-[2rem] p-12 text-center">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -226,7 +220,6 @@ export default function DoctorConsultPage() {
             </div>
           )}
 
-          {/* Form */}
           {!success && (
             <div className="bg-white rounded-[2rem] border-2 border-slate-200 overflow-hidden shadow-sm">
               <div className="bg-slate-900 p-6 text-white flex items-center gap-2">
@@ -236,7 +229,6 @@ export default function DoctorConsultPage() {
 
               <div className="p-8 space-y-6">
 
-                {/* Submit Error */}
                 {submitError && (
                   <div className="px-4 py-3 bg-red-50 border border-red-200 text-red-600 text-sm font-bold rounded-2xl flex items-center gap-2">
                     <AlertTriangle size={16} /> {submitError}
@@ -301,8 +293,22 @@ export default function DoctorConsultPage() {
             </div>
           )}
         </div>
-
       </main>
     </div>
+  );
+}
+
+export default function DoctorConsultPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4 text-slate-400">
+          <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-600 border-t-transparent" />
+          <span className="font-black text-xs uppercase tracking-widest">Loading...</span>
+        </div>
+      </div>
+    }>
+      <DoctorConsultPageInner />
+    </Suspense>
   );
 }
