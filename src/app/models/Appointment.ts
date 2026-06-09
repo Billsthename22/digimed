@@ -7,9 +7,14 @@ export interface IAppointment extends Document {
   doctorId: mongoose.Types.ObjectId;
   doctorName: string;
   date: string;
-  createdAt: Date; 
   time: string;
   status: "Waiting" | "In-Queue" | "Attended" | "Cancelled";
+  reason: string;
+  department: string;
+  schoolDepartment: string;
+  severity: number;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const appointmentSchema = new Schema<IAppointment>(
@@ -21,18 +26,38 @@ const appointmentSchema = new Schema<IAppointment>(
     doctorName: { type: String, required: true },
     date: { type: String, required: true },
     time: { type: String, required: true },
-    
     status: {
       type: String,
       enum: ["Waiting", "In-Queue", "Attended", "Cancelled"],
       default: "Waiting",
     },
+    reason: {
+      type: String,
+      required: [true, "Reason for visit is required"],
+      trim: true,
+    },
+    department: {
+      type: String,
+      required: [true, "Clinic service is required"],
+      trim: true,
+    },
+    schoolDepartment: {
+      type: String,
+      required: [true, "School department is required"],
+      trim: true,
+    },
+    severity: {
+      type: Number,
+      default: 1,
+    },
   },
   { timestamps: true }
 );
 
-const Appointment: Model<IAppointment> =
-  mongoose.models.Appointment ||
-  mongoose.model<IAppointment>("Appointment", appointmentSchema);
+// Force delete cached model so new schema is used
+if (mongoose.models.Appointment) {
+  delete mongoose.models.Appointment;
+}
 
+const Appointment = mongoose.model<IAppointment>("Appointment", appointmentSchema);
 export default Appointment;

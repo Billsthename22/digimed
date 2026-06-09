@@ -36,11 +36,15 @@ export default function LoginPage() {
         return;
       }
 
-      // Store token
-      localStorage.setItem('token', data.token);
+      // Store token under the correct key per role
+      if (role === 'student') {
+        localStorage.setItem('studentToken', data.token);
+        router.push('/dashboard');
+      } else {
+        localStorage.setItem('doctorToken', data.token);
+        router.push('/doctordashboard');
+      }
 
-      // Redirect based on role
-      router.push(role === 'student' ? '/dashboard' : '/staff/dashboard');
     } catch (err) {
       setError('Network error. Please try again.');
     } finally {
@@ -69,15 +73,17 @@ export default function LoginPage() {
           <div className="flex bg-slate-100 p-1.5 rounded-2xl mb-8">
             <button
               onClick={() => { setRole('student'); setError(''); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${role === 'student' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
-                }`}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${
+                role === 'student' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
+              }`}
             >
               <UserCircle size={18} /> Student
             </button>
             <button
               onClick={() => { setRole('staff'); setError(''); }}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${role === 'staff' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
-                }`}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${
+                role === 'staff' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'
+              }`}
             >
               <Stethoscope size={18} /> Medical Staff
             </button>

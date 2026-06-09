@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
-import connectDB from "../../lib/connectDB";
-import Appointment from "../../models/Appointment";
-
+import connectDB from "@/src/app/lib/connectDB";
+import Appointment from "@/src/app/models/Appointment";
 
 export async function GET() {
   try {
@@ -23,9 +22,21 @@ export async function POST(req: NextRequest) {
   try {
     await connectDB();
 
-    const { studentId, studentName, matricNumber, doctorId, doctorName, date, time } = await req.json();
+    const {
+      studentId,
+      studentName,
+      matricNumber,
+      doctorId,
+      doctorName,
+      date,
+      time,
+      reason,
+      department,
+      schoolDepartment,
+      severity,
+    } = await req.json();
 
-    if (!studentId || !studentName || !matricNumber || !doctorId || !doctorName || !date || !time) {
+    if (!studentId || !studentName || !matricNumber || !doctorId || !doctorName || !date || !time || !reason || !department || !schoolDepartment) {
       return Response.json(
         { success: false, message: "All fields are required" },
         { status: 400 }
@@ -45,8 +56,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check if that time slot is already taken for that doctor
-    const slotTaken = await Appointment.findOne({ doctorId, date, time, status: { $in: ["Waiting", "In-Queue"] } });
+    // Check if time slot is already taken for that doctor
+    const slotTaken = await Appointment.findOne({
+      doctorId,
+      date,
+      time,
+      status: { $in: ["Waiting", "In-Queue"] },
+    });
+
     if (slotTaken) {
       return Response.json(
         { success: false, message: "This time slot is already booked. Please pick another." },
@@ -62,6 +79,10 @@ export async function POST(req: NextRequest) {
       doctorName,
       date,
       time,
+      reason,
+      department,
+      schoolDepartment,
+      severity: severity ?? 1,
       status: "Waiting",
     });
 

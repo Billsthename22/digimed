@@ -42,7 +42,7 @@ export default function StaffAuthPage() {
         return;
       }
 
-      localStorage.setItem("token", data.token);
+      localStorage.setItem("doctorToken", data.token);
       router.push("/doctordashboard");
     } catch {
       setErrorMsg("Network error. Please try again.");
@@ -106,18 +106,16 @@ export default function StaffAuthPage() {
           <button
             type="button"
             onClick={() => { setIsLogin(true); setErrorMsg(null); }}
-            className={`flex-1 py-2 font-bold rounded-lg ${
-              isLogin ? "bg-blue-500 text-white" : "text-slate-400"
-            }`}
+            className={`flex-1 py-2 font-bold rounded-lg ${isLogin ? "bg-blue-500 text-white" : "text-slate-400"
+              }`}
           >
             Login
           </button>
           <button
             type="button"
             onClick={() => { setIsLogin(false); setErrorMsg(null); }}
-            className={`flex-1 py-2 font-bold rounded-lg ${
-              !isLogin ? "bg-blue-500 text-white" : "text-slate-400"
-            }`}
+            className={`flex-1 py-2 font-bold rounded-lg ${!isLogin ? "bg-blue-500 text-white" : "text-slate-400"
+              }`}
           >
             Register
           </button>
@@ -125,11 +123,10 @@ export default function StaffAuthPage() {
 
         {/* Error / Success */}
         {errorMsg && (
-          <div className={`mb-4 p-3 rounded-lg text-sm font-bold text-center ${
-            errorMsg.includes("created")
+          <div className={`mb-4 p-3 rounded-lg text-sm font-bold text-center ${errorMsg.includes("created")
               ? "bg-emerald-500/10 text-emerald-400"
               : "bg-red-500/10 text-red-400"
-          }`}>
+            }`}>
             {errorMsg}
           </div>
         )}

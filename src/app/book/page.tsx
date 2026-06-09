@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Clock, User, ArrowRight, CheckCircle2, Loader2, Stethoscope, AlertTriangle } from 'lucide-react';
+import { Clock, ArrowRight, CheckCircle2, Loader2, AlertTriangle } from 'lucide-react';
 
 interface Doctor {
   _id: string;
@@ -22,13 +22,36 @@ const timeSlots = [
   "12:00 PM", "12:20 PM", "12:40 PM",
 ];
 
-const departments = [
+const clinicDepartments = [
   "General Consultation",
   "Cardiology",
   "Dental Clinic",
   "Optometry",
   "Mental Health / Counseling",
   "Laboratory Services"
+];
+
+const schoolDepartments = [
+  "Chemical Engineering",
+  "Computer Science",
+  "Electrical Engineering",
+  "Mechanical Engineering",
+  "Civil Engineering",
+  "Physics",
+  "Biochemistry",
+  "Mass Communication",
+  "Medicine & Surgery",
+  "Nursing",
+  "Pharmacy",
+  "Law",
+  "Economics",
+  "Accounting",
+  "Business Administration",
+  "Architecture",
+  "Agricultural Engineering",
+  "Microbiology",
+  "Mathematics",
+  "Statistics",
 ];
 
 function decodeToken(token: string): StudentInfo | null {
@@ -56,19 +79,17 @@ export default function BookingPage() {
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState(true);
   const [step, setStep] = useState(1);
-  
-  // New Form States
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [selectedSlot, setSelectedSlot] = useState('');
   const [department, setDepartment] = useState('');
+  const [schoolDepartment, setSchoolDepartment] = useState('');
   const [reason, setReason] = useState('');
   const [severity, setSeverity] = useState(1);
-
   const [booking, setBooking] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('studentToken');
     if (!token) { window.location.href = '/login'; return; }
     const info = decodeToken(token);
     if (!info) { window.location.href = '/login'; return; }
@@ -90,8 +111,8 @@ export default function BookingPage() {
   };
 
   const handleConfirm = async () => {
-    if (!student || !selectedDoctor || !selectedSlot || !department || !reason) {
-      setError("Please fill in all details including department and reason.");
+    if (!student || !selectedDoctor || !selectedSlot || !department || !schoolDepartment || !reason) {
+      setError("Please fill in all details.");
       return;
     }
     setBooking(true);
@@ -108,6 +129,7 @@ export default function BookingPage() {
           doctorId: selectedDoctor._id,
           doctorName: selectedDoctor.fullName,
           department,
+          schoolDepartment,
           reason,
           severity,
           date: getTodayDate(),
@@ -118,10 +140,10 @@ export default function BookingPage() {
       const data = await res.json();
       if (!res.ok) {
         setError(data.message);
-        setStep(2); 
+        setStep(2);
         return;
       }
-      setStep(3); 
+      setStep(3);
     } catch {
       setError('Network error. Please try again.');
     } finally {
@@ -137,6 +159,7 @@ export default function BookingPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12">
+      {/* Header */}
       <div className="bg-white border-b px-8 py-4 flex justify-between items-center shadow-sm">
         <h1 className="text-xl font-black text-slate-800 uppercase italic">New Appointment</h1>
         <div className="hidden md:flex items-center space-x-4 text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -149,6 +172,8 @@ export default function BookingPage() {
       </div>
 
       <main className="max-w-4xl mx-auto mt-10 px-6">
+
+        {/* Error Banner */}
         {error && (
           <div className="mb-6 px-6 py-4 bg-red-50 border-2 border-red-100 text-red-600 text-xs font-black uppercase tracking-widest rounded-2xl flex items-center gap-3">
             <AlertTriangle size={18} /> {error}
@@ -157,12 +182,17 @@ export default function BookingPage() {
 
         {/* Step 1: Doctor Selection */}
         {step === 1 && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h2 className="text-3xl font-black text-[#0F1E3D] uppercase italic tracking-tighter">Choose a Specialist</h2>
+          <div className="space-y-6">
+            <h2 className="text-3xl font-black text-slate-900 uppercase italic tracking-tighter">Choose a Specialist</h2>
+
             {loadingDoctors ? (
               <div className="flex items-center justify-center py-20 gap-3 text-slate-400">
                 <Loader2 className="animate-spin" size={24} />
                 <span className="font-black uppercase text-[10px] tracking-widest">Loading...</span>
+              </div>
+            ) : doctors.length === 0 ? (
+              <div className="text-center py-20 text-slate-400 font-bold">
+                No doctors available at the moment.
               </div>
             ) : (
               <div className="grid gap-4">
@@ -174,10 +204,12 @@ export default function BookingPage() {
                   >
                     <div className="flex items-center space-x-6">
                       <div className="w-14 h-14 bg-slate-50 text-blue-600 rounded-2xl flex items-center justify-center font-black text-xl border border-slate-100 group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                        {doc.fullName.split(' ').map((n) => n[0]).slice(0, 2).join('')}
+                        {doc.fullName.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()}
                       </div>
                       <div>
-                        <h3 className="font-black text-lg text-[#0F1E3D] uppercase italic leading-none mb-1">Dr. {doc.fullName}</h3>
+                        <h3 className="font-black text-lg text-slate-900 uppercase italic leading-none mb-1">
+                          Dr. {doc.fullName}
+                        </h3>
                         <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">{doc.email}</p>
                       </div>
                     </div>
@@ -191,48 +223,96 @@ export default function BookingPage() {
           </div>
         )}
 
-        {/* Step 2: Details & Time Slot */}
+        {/* Step 2: Details & Time */}
         {step === 2 && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
-            <button onClick={() => setStep(1)} className="flex items-center gap-2 text-[#0F1E3D] text-[10px] font-black uppercase tracking-widest hover:text-blue-600 transition-colors">
+          <div className="space-y-6">
+            <button
+              onClick={() => setStep(1)}
+              className="flex items-center gap-2 text-slate-900 text-[10px] font-black uppercase tracking-widest hover:text-blue-600 transition-colors"
+            >
               <ArrowRight size={14} className="rotate-180" /> Change Doctor
             </button>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
               {/* Form Section */}
               <div className="space-y-6">
                 <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-6">
+
+                  {/* Auto-filled Student Info */}
+                  <div className="bg-slate-50 border-2 border-slate-100 rounded-2xl p-5 space-y-3">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Patient Details</p>
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-black text-sm shrink-0">
+                        {student?.fullName.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-black text-slate-900">{student?.fullName}</p>
+                        <p className="text-xs font-bold text-slate-400">{student?.matricNumber}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* School Department */}
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Department</label>
-                    <select 
-                      value={department}
-                      onChange={(e) => setDepartment(e.target.value)}
-                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm font-bold focus:border-blue-600 outline-none transition-all"
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      School Department
+                    </label>
+                    <select
+                      value={schoolDepartment}
+                      onChange={(e) => setSchoolDepartment(e.target.value)}
+                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm font-bold text-slate-900 focus:border-blue-600 outline-none transition-all"
                     >
-                      <option value="">Select Department</option>
-                      {departments.map(dept => <option key={dept} value={dept}>{dept}</option>)}
+                      <option value="">Select Your Department</option>
+                      {schoolDepartments.map(dept => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))}
                     </select>
                   </div>
 
+                  {/* Clinic Department */}
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Reason for Visit</label>
-                    <textarea 
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      Clinic Service
+                    </label>
+                    <select
+                      value={department}
+                      onChange={(e) => setDepartment(e.target.value)}
+                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm font-bold text-slate-900 focus:border-blue-600 outline-none transition-all"
+                    >
+                      <option value="">Select Clinic Service</option>
+                      {clinicDepartments.map(dept => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Reason */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      Reason for Visit
+                    </label>
+                    <textarea
                       placeholder="Briefly describe your symptoms..."
                       value={reason}
                       onChange={(e) => setReason(e.target.value)}
                       rows={3}
-                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm font-bold focus:border-blue-600 outline-none transition-all resize-none"
+                      className="w-full bg-slate-50 border-2 border-slate-100 rounded-xl p-4 text-sm font-bold text-slate-900 placeholder:text-slate-400 focus:border-blue-600 outline-none transition-all resize-none"
                     />
                   </div>
 
+                  {/* Severity */}
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                        Severity Level: <span className={`px-2 py-0.5 rounded text-white ${getSeverityColor()}`}>{severity}</span>
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Severity Level:
                       </label>
+                      <span className={`px-3 py-1 rounded-full text-white text-xs font-black ${getSeverityColor()}`}>
+                        {severity <= 3 ? 'Low' : severity <= 7 ? 'Moderate' : 'High'} — {severity}/10
+                      </span>
                     </div>
-                    <input 
-                      type="range" min="1" max="10" 
+                    <input
+                      type="range" min="1" max="10"
                       value={severity}
                       onChange={(e) => setSeverity(parseInt(e.target.value))}
                       className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-600"
@@ -248,20 +328,21 @@ export default function BookingPage() {
               {/* Time Section */}
               <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm">
                 <div className="flex items-center justify-between mb-6">
-                   <h3 className="text-sm font-black text-[#0F1E3D] uppercase tracking-widest">Select Slot</h3>
-                   <div className="flex items-center gap-2 text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter">
-                    <Clock size={12} /> {getTodayDate()}
-                   </div>
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">Select Slot</h3>
+                  <div className="flex items-center gap-2 text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter">
+                    <Clock size={12} /> Today
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {timeSlots.map((slot) => (
                     <button
                       key={slot}
                       onClick={() => setSelectedSlot(slot)}
-                      className={`py-4 rounded-2xl border-2 text-[11px] font-black transition-all ${selectedSlot === slot
-                          ? "bg-[#0F1E3D] border-[#0F1E3D] text-white shadow-xl shadow-blue-900/20"
+                      className={`py-4 rounded-2xl border-2 text-[11px] font-black transition-all ${
+                        selectedSlot === slot
+                          ? "bg-slate-900 border-slate-900 text-white shadow-xl"
                           : "bg-white border-slate-100 text-slate-600 hover:border-blue-300"
-                        }`}
+                      }`}
                     >
                       {slot}
                     </button>
@@ -270,8 +351,8 @@ export default function BookingPage() {
 
                 <button
                   onClick={handleConfirm}
-                  disabled={!selectedSlot || !department || !reason || booking}
-                  className="mt-8 w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50"
+                  disabled={!selectedSlot || !department || !schoolDepartment || !reason.trim() || booking}
+                  className="mt-8 w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-3 hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {booking ? <Loader2 className="animate-spin" size={18} /> : <>Confirm Visit <ArrowRight size={18} /></>}
                 </button>
@@ -280,18 +361,32 @@ export default function BookingPage() {
           </div>
         )}
 
-        {/* Step 3: Success Screen */}
+        {/* Step 3: Success */}
         {step === 3 && (
-          <div className="text-center bg-white p-12 rounded-[4rem] shadow-2xl border border-slate-100 animate-in zoom-in-95 duration-500">
+          <div className="text-center bg-white p-12 rounded-[4rem] shadow-2xl border border-slate-100">
             <div className="w-24 h-24 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-8 border-4 border-white shadow-lg">
               <CheckCircle2 size={48} />
             </div>
-            <h2 className="text-4xl font-black text-[#0F1E3D] uppercase italic tracking-tighter leading-none mb-4">Visit Secured</h2>
+            <h2 className="text-4xl font-black text-slate-900 uppercase italic tracking-tighter leading-none mb-4">
+              Visit Secured
+            </h2>
             <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mb-10">
               Please present your digital ID at the reception.
             </p>
-            
-            <div className="bg-[#0F1E3D] text-white p-8 rounded-[2.5rem] mb-10 text-left space-y-4 shadow-2xl">
+
+            <div className="bg-slate-900 text-white p-8 rounded-[2.5rem] mb-10 text-left space-y-4 shadow-2xl">
+              <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                <span className="text-blue-300 text-[10px] font-black uppercase tracking-widest">Patient</span>
+                <span className="font-black uppercase">{student?.fullName}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                <span className="text-blue-300 text-[10px] font-black uppercase tracking-widest">Matric</span>
+                <span className="font-black">{student?.matricNumber}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                <span className="text-blue-300 text-[10px] font-black uppercase tracking-widest">School Dept.</span>
+                <span className="font-black text-xs uppercase">{schoolDepartment}</span>
+              </div>
               <div className="flex justify-between items-center border-b border-white/10 pb-4">
                 <span className="text-blue-300 text-[10px] font-black uppercase tracking-widest">Specialist</span>
                 <span className="font-black italic uppercase">Dr. {selectedDoctor?.fullName}</span>
@@ -301,7 +396,7 @@ export default function BookingPage() {
                 <span className="font-black text-blue-400">{selectedSlot} — Today</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-blue-300 text-[10px] font-black uppercase tracking-widest">Dept.</span>
+                <span className="text-blue-300 text-[10px] font-black uppercase tracking-widest">Clinic Service</span>
                 <span className="font-black text-xs uppercase">{department}</span>
               </div>
             </div>
