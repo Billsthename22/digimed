@@ -40,7 +40,7 @@ const studentSchema = new Schema<IStudent>(
           if (!domain) return true;
           return email.endsWith(`@${domain}`);
         },
-        message: "Email must be a valid university email address",
+        message: "Email must end with @stu.cu.edu.ng",
       },
     },
     password: {

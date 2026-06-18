@@ -3,6 +3,8 @@ import connectDB from "@/src/app/lib/connectDB";
 import Appointment from "@/src/app/models/Appointment";
 import Prescription from "@/src/app/models/Prescription";
 import ExcuseSlip from "@/src/app/models/ExcuseSlip";
+import Student from "@/src/app/models/student";
+import { sendEmail } from "@/src/app/lib/email";
 
 export async function POST(
   req: NextRequest,
@@ -70,6 +72,28 @@ export async function POST(
 
     // Mark appointment as Attended
     await Appointment.findByIdAndUpdate(id, { status: "Attended" });
+
+    // Send email notification to student
+    const student = await Student.findById(appointment.studentId);
+    if (student?.email) {
+      await sendEmail({
+        to: student.email,
+        subject: "Your prescription has been sent to the pharmacy",
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #1d4ed8;">DigiMed Health Update</h2>
+            <p>Hi ${appointment.studentName},</p>
+            <p>Dr. ${appointment.doctorName} has finished your consultation and sent your prescription to the campus pharmacy.</p>
+            <div style="background: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px; margin: 16px 0;">
+              <p style="margin: 0;"><strong>Medication:</strong> ${medication}</p>
+            </div>
+            <p>You'll receive another email once it's ready for pickup.</p>
+            ${slip ? `<p>Your medical excuse slip is also available on your dashboard.</p>` : ""}
+            <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">DigiMed University Health System</p>
+          </div>
+        `,
+      });
+    }
 
     return Response.json(
       {

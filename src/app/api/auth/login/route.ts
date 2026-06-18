@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     }
 
     // --- Validate email domain ---
-    if (!email.endsWith("@edu.ng")) {
+    if (!email.endsWith(`@${process.env.UNIVERSITY_EMAIL_DOMAIN}`)) {
       return Response.json(
         { success: false, message: "Email must be a valid university email address" },
         { status: 400 }
